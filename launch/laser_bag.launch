@@ -1,0 +1,17 @@
+<launch>
+  <arg name="bag_filename" default="/home/peak/Downloads/ros_bag/okagv_ros_bag/2020-11-09-09-19-05.bag"/>
+
+  <param name="/use_sim_time" value="true" />
+
+  <param name="robot_description"
+    textfile="$(find cartographer_ros)/urdf/backpack_2d_peak_okagv_laser_test.urdf" />
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher"
+    type="robot_state_publisher" />
+
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/demo_2d_okagv_laser_test.rviz" />
+  <node name="playbag" pkg="rosbag" type="play"
+      args="--clock -r 1 $(arg bag_filename)" />
+
+</launch>

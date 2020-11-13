@@ -1,0 +1,6 @@
+<launch>
+
+   <node pkg="laser_reflector_detect" type="laser_reflector_detect_node" name="laser_reflector_detect_node"  
+     output="screen" />
+
+</launch>
