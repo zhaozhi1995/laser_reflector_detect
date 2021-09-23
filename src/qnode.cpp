@@ -33,7 +33,7 @@
 namespace qt_test
 {
 
-    /*****************************************************************************
+/*****************************************************************************
 ** Implementation
 *****************************************************************************/
 
@@ -72,96 +72,71 @@ namespace qt_test
         {
             ROS_INFO("ros master success");
         }
-        //ros::start(); // explicitly needed since our nodehandle is going out of scope.
-        //ros::NodeHandle n;
-        // Add your ros communications here.
 
-        ros::param::get("/laser_reflector_detect_node/angle_error_scale", angle_error_scale);
-        ros::param::get("/laser_reflector_detect_node/distance_error_scale", distance_error_scale);
-        ros::param::get("/laser_reflector_detect_node/reflector_radius", reflector_radius);
-        ros::param::get("/laser_reflector_detect_node/min_reflector_sample_count", min_reflector_sample_count);
-        ros::param::get("/laser_reflector_detect_node/reflector_intensity", reflector_intensity);
-        ros::param::get("/laser_reflector_detect_node/kLandmarkMarkerScale", kLandmarkMarkerScale);
+        //ros::param::get("/laser_reflector_detect_node/angle_error_scale", angle_error_scale);
+        //ros::param::get("/laser_reflector_detect_node/distance_error_scale", distance_error_scale);
         ros::param::get("/laser_reflector_detect_node/reflector_combined_length", reflector_combined_length);
+        //反光柱的半径
+        ros::param::get("/laser_reflector_detect_node/reflector_radius", reflector_radius);
+        //检测反光柱的最小点数
+        ros::param::get("/laser_reflector_detect_node/min_reflector_sample_count", min_reflector_sample_count);
+        //检测反光柱的最小强度
+        ros::param::get("/laser_reflector_detect_node/min_reflector_intensity", min_reflector_intensity);
+        //导航时定位的反光柱的大小
+        ros::param::get("/laser_reflector_detect_node/kLandmarkMarkerScale", kLandmarkMarkerScale);
+        //使用反光柱的模式
         ros::param::get("/laser_reflector_detect_node/reflector_combination_mode", reflector_combination_mode);
+        //激光坐标系的名称
         ros::param::get("/laser_reflector_detect_node/lidar_frame", lidar_frame_);
+        //地图坐标系的名称
         ros::param::get("/laser_reflector_detect_node/map_frame", map_frame_);
-        ros::param::get("/laser_reflector_detect_node/match_distance_accepted", MATCH_DISTANCE_ACCEPTED);
+        //导航时可允许的反光柱检测误差
+        ros::param::get("/laser_reflector_detect_node/match_distance_accepted", match_distance_acceped);
 
         std::cout << "lidar_frame_: " << lidar_frame_ << std::endl;
         std::cout << "map_frame_: " << map_frame_ << std::endl;
-        std::cout << "MATCH_DISTANCE_ACCEPTED: " << MATCH_DISTANCE_ACCEPTED << std::endl;
+        std::cout << "match_distance_acceped: " << match_distance_acceped << std::endl;
 
-        chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
+        //订阅激光话题
+        scan_sub_ = n.subscribe("/scan", 1, &QNode::laserProcess, this);
 
-        scan_sub_ = n.subscribe("/scan", 1, &QNode::callback, this);
-
+        //订阅全局反光板话题
         global_reflector_pos_sub_ = n.subscribe("/landmark_poses_list", 1, &QNode::getGlobalReflector, this);
 
+        //订阅机器人当前位姿话题
         robot_pose_sub_ = n.subscribe("/base_link_odom", 1, &QNode::getRobotPose, this);
 
+        //订阅当前建图与导航系统状态
         system_working_state_sub_ = n.subscribe("working_state", 1, &QNode::getSystemWoringState, this);
 
-        //debug_points_ = n.advertise<sensor_msgs::PointCloud2>("dock_points",10);
         //检测到的反光板
         reflector_points_ = n.advertise<geometry_msgs::PointStamped>("reflector_points", 1);
+
         //发送给cartographer的landmark
         reflector_landmark_ = n.advertise<cartographer_ros_msgs::LandmarkList>("Laserlandmark", 1);
 
+        //定位时检测到的反光板
         current_landmark_list_pub_ = n.advertise<::visualization_msgs::MarkerArray>("current_landmark_list", 1);
 
-        reflector_localization_pos_pub_ = n.advertise<::visualization_msgs::MarkerArray>("reflector_localization_pos", 1);
+        //使用反光板定位发布的机器人位姿
+        //reflector_localization_pos_pub_ = n.advertise<::visualization_msgs::MarkerArray>("reflector_localization_pos", 1);
 
-        //<origin rpy="0 0 -0.005406" xyz="0.169713 0.003589 0.0" />
+        //机器人到雷达的外参
         base_link_to_lidar = tf::Transform(tf::createQuaternionFromRPY(0, 0, -0.005406), tf::Vector3(0.169713, 0.003589, 0));
-
-        //pubLaserOdometryGlobal = n.advertise<nav_msgs::Odometry>("lidar/odometry", 1);
-
+        
+        //雷达未矫正的移动路线
         lidar_uncorrected_pub_ = n.advertise<nav_msgs::Path>("lidar/uncorrcted_path", 1);
-        lidar_corrected_pub_ = n.advertise<nav_msgs::Path>("lidar/corrcted_path", 1);
 
+        //雷达矫正后的移动路线
+        lidar_corrected_pub_ = n.advertise<nav_msgs::Path>("lidar/corrcted_path", 1);
+        
+        //雷达矫正与未矫正之间的连线
         error_edge_pub_ = n.advertise<visualization_msgs::MarkerArray>("/lidar/error_edge", 1);
 
+        //反光柱矫正后的机器人位姿
         robot_pose_pub_ = n.advertise<cartographer_ros_msgs::RobotPose>("/robot_pose", 1);
 
-        //start();
         return true;
-    }
-
-    bool QNode::init(const std::string &master_url, const std::string &host_url)
-    {
-        /*
-        std::map<std::string, std::string> remappings;
-        remappings["__master"] = master_url;
-        remappings["__hostname"] = host_url;
-        ros::init(remappings, "qt_test");
-        if (!ros::master::check())
-        {
-            return false;
-        }
-        ros::start(); // explicitly needed since our nodehandle is going out of scope.
-        ros::NodeHandle n;
-        // Add your ros communications here.
-        chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
-        //start();
-        return true;
-        */
-    }
-
-    void QNode::run()
-    {
-        /*
-        ros::Rate loop_rate(30);
-        int count = 0;
-        while (ros::ok())
-        {
-            ros::spinOnce();
-            loop_rate.sleep();
-            ++count;
-        }
-        std::cout << "Ros shutdown, proceeding to close the gui." << std::endl;
-        Q_EMIT rosShutdown(); // used to signal the gui for a shutdown (useful to roslaunch)
-        */
     }
 
     void QNode::log(const LogLevel &level, const std::string &msg)
@@ -208,31 +183,24 @@ namespace qt_test
         */
     }
 
-    void QNode::callback(const sensor_msgs::LaserScanConstPtr &scan)
+    void QNode::laserProcess(const sensor_msgs::LaserScanConstPtr &scan)
     {
         //tf::Stamped<tf::Pose> laser_pose; // later is used for localization
         tf::Pose laser_pose;
-        //laser_processor::SampleSet* cluster = new laser_processor::SampleSet;
         std::vector<laser_processor::Sample *> scan_filter;
 
         for (uint32_t i = 0; i < scan->ranges.size(); i++)
         {
-            laser_processor::Sample *s = laser_processor::Sample::Extract(i, reflector_intensity, *scan);
-
-            if (s != NULL)
-            {
-                //cluster->insert(s);
-                scan_filter.push_back(s);
-            }
+            laser_processor::Sample *s = laser_processor::Sample::Extract(i, min_reflector_intensity, *scan);
+            if (s != NULL) scan_filter.push_back(s);
         }
 
-        if (scan_filter.size() == 0)
-            return;
+        if (scan_filter.size() == 0) return;
 
         //get the center of reflector
         double center_x, center_y, center_yaw, center_count, center_distance;
         std::vector<Reflector_pos> reflectors_;
-        double last_item_x, last_item_y, last_item_range;
+        //double last_item_x, last_item_y, last_item_range;
         bool is_mark_start = true;
 
         // store the temp data of reflector
@@ -240,8 +208,8 @@ namespace qt_test
         // store the intensity data of reflector
         std::vector<int> intensity_data;
 
-        //for(laser_processor::SampleSet::iterator p = cluster->begin(); p != cluster->end(); p++)
         //std::cout << "peak.ding scan_filter size " << scan_filter.size() << std::endl;
+        //检测有多少个反光柱
         for (int i = 0; i < scan_filter.size(); i++)
         {
             is_mark_start = true;
@@ -252,8 +220,8 @@ namespace qt_test
 
                 //std::cout << "peak.ding last index " << p->index << std::endl;
 
-                double item_x = p->x;
-                double item_y = p->y;
+                //double item_x = p->x;
+                //double item_y = p->y;
                 double item_r = p->range;
                 double item_i = p->intensity;
                 //origin angle range is -180~180,transfer to 0~360
@@ -265,11 +233,11 @@ namespace qt_test
                     //center_y = p->y;
                     //center_yaw = item_angle;
                     center_count = 1;
-                    //
+                    //开始记录单个反光柱的角度和距离
                     reflector_data.clear();
                     reflector_data.push_back(std::pair<double, double>(item_a, item_r));
                     //std::cout << "Peak.ding index " << p->index << " item_angle " << item_a << std::endl;
-
+                    //开始记录单个反光柱的强度
                     intensity_data.clear();
                     intensity_data.push_back(item_i);
 
@@ -277,9 +245,9 @@ namespace qt_test
                 }
                 else
                 {
-                    double d_x = item_x - last_item_x;
-                    double d_y = item_y - last_item_y;
-                    double d_xy = sqrt(pow(d_x, 2) + pow(d_y, 2));
+                    //double d_x = item_x - last_item_x;
+                    //double d_y = item_y - last_item_y;
+                    //double d_xy = sqrt(pow(d_x, 2) + pow(d_y, 2));
                     //std::cout << "Peak.ding d_xy " << d_xy << std::endl;
 
                     //double distance_internal = tan(scan->angle_increment) * last_item_range;
@@ -287,24 +255,27 @@ namespace qt_test
                     //double angle_internal =  atan2(d_xy,last_item_range); //d_xy / item_range;
 
                     //angle_error = scan->angle_increment * angle_error_scale;
-                    distance_error = 2 * reflector_radius;
+                    //distance_error = 2 * reflector_radius;
 
                     //check the scan point not the last one
                     //if ((angle_internal < angle_error || d_xy < distance_error) && (j != scan_filter.size() - 1))
+                    //检测强度点是否连续来进行分割
                     if ((p->index - last_index) < 3 && (j != scan_filter.size() - 1))
                     {
                         //center_x += p->x;
                         //center_y += p->y;
                         //center_yaw += center_yaw;
-                        center_count++;
+                       
                         reflector_data.push_back(std::pair<double, double>(item_a, item_r));
                         //std::cout << "Peak.ding index " << p->index << " item_angle " << item_a << std::endl;
                         //std::cout << "Peak.ding reflector_data size " << reflector_data.size() << std::endl;
 
                         intensity_data.push_back(item_i);
+                        center_count++;
                     }
                     else
                     {
+                        //记录当前的反光柱点平均距离
                         double sum_range_of_target = 0;
                         for (auto it : reflector_data)
                         {
@@ -312,6 +283,7 @@ namespace qt_test
                         }
                         double avg_range = sum_range_of_target / reflector_data.size();
 
+                        //记录当前反光柱子的平均强度
                         double sum_intensity_of_target = 0;
                         for (auto it : intensity_data)
                         {
@@ -320,6 +292,7 @@ namespace qt_test
                         double avg_intensity = sum_intensity_of_target / intensity_data.size();
 
                         //check the points number of reflecor size is < 5cm/D/scan->angle_increment
+                        //计算反光柱的有效点数量 放宽至理想值的0.6~1.2。
                         int max_size = std::floor((2.0 * reflector_radius / avg_range) / scan->angle_increment * 1.2);
                         int min_size = max_size * 0.6 > min_reflector_sample_count ? max_size * 0.6 : min_reflector_sample_count;
 
@@ -438,14 +411,15 @@ namespace qt_test
                     }
                 }
 
-                last_item_x = item_x;
-                last_item_y = item_y;
-                last_item_range = item_r;
+                //last_item_x = item_x;
+                //last_item_y = item_y;
+                //last_item_range = item_r;
                 last_index = p->index;
             }
         }
 
         //peak add
+        //检测到的反光柱的数量
         if (reflectors_.size() < 3)
         {
             std::cout << "Peak.ding reflectors_.size() " << reflectors_.size() << std::endl;
@@ -515,7 +489,7 @@ namespace qt_test
                         //
                         double distance = global_reflector_point.distance(map_reflectors);
 
-                        if (distance < MATCH_DISTANCE_ACCEPTED)
+                        if (distance < match_distance_acceped)
                         {
                             match_id = item.first;
                             is_match = true;

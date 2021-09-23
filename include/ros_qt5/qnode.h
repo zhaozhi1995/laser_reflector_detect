@@ -127,8 +127,6 @@ public:
 	QNode(ros::NodeHandle node_handle,tf2_ros::Buffer* buffer);
 	virtual ~QNode();
 	bool init();
-	bool init(const std::string &master_url, const std::string &host_url);
-	void run();
 
 	/*********************
 	** Logging
@@ -155,7 +153,6 @@ Q_SIGNALS:
 private:
 	int init_argc;
 	char** init_argv;
-	ros::Publisher chatter_publisher;
     QStringListModel logging_model;
 
     ros::Subscriber scan_sub_;
@@ -163,7 +160,7 @@ private:
     ros::Subscriber robot_pose_sub_;
     ros::Subscriber system_working_state_sub_;
 
-    void callback(const sensor_msgs::LaserScanConstPtr& scan);
+    void laserProcess(const sensor_msgs::LaserScanConstPtr& scan);
     void getGlobalReflector(const visualization_msgs::MarkerArrayConstPtr& data);
     void getRobotPose(const cartographer_ros_msgs::RobotPoseConstPtr& data);
     bool selectProperData(std::map<Reflector_pos,int/*id*/> &global_match_data,std::vector<int/*id*/> proper_data);
@@ -172,7 +169,6 @@ private:
 
     sensor_msgs::LaserScan scan_;
 
-    ros::Publisher debug_points_;
     ros::Publisher reflector_points_;
     ros::Publisher reflector_landmark_;
     ros::Publisher current_landmark_list_pub_;
@@ -182,11 +178,11 @@ private:
     ros::Publisher error_edge_pub_;
     ros::Publisher robot_pose_pub_;
 
-    double angle_error_scale = 15;
-    double distance_error_scale = 15;
+    //double angle_error_scale = 15;
+    //double distance_error_scale = 15;
     double reflector_radius = 0.0 / 2.0;
     int min_reflector_sample_count = 8;
-    int reflector_intensity = 1000;
+    int min_reflector_intensity = 1000;
 
     double kLandmarkMarkerScale = 0.05;
 
@@ -209,8 +205,7 @@ private:
 
     tf::TransformListener * tf_;
 
-    double MATCH_DISTANCE_ACCEPTED;
-
+    double match_distance_acceped;
     //rearrange by first
     //std::map<double/*range*/,int/*id*/> global_match_data;
     std::map<Reflector_pos,int/*id*/> global_match_data;
