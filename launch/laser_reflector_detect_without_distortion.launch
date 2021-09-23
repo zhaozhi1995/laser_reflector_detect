@@ -1,0 +1,55 @@
+<launch>
+  <arg name="bag_filename" default="/home/peak/Downloads/ros_bag/okagv_ros_bag/2021-02-02/2021-02-02-14-21-19.bag"/>
+
+  <param name="/use_sim_time" value="true" />
+
+  <param name="robot_description"
+    textfile="$(find cartographer_ros)/urdf/backpack_2d_peak_okagv_laser_test.urdf" />
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher"
+    type="robot_state_publisher" />
+
+  <!--lidar undistortion -->
+  <node name="lidar_undistortion_node" pkg="lidar_undistortion"  type="lidar_undistortion" output="screen">
+
+    <param name="lidar_topic" value="/scan"/>
+    <!-- Estimated time of lidar message transmission(ms) -->
+    <param name="lidar_msg_delay_time" value="10.0"/>
+
+    <param name="scan_direction_clockwise" value="true"/>
+
+    <param name="imu_topic" value="IMU"/>
+    <param name="imu_frequency" value="100.0"/>
+
+    <param name="output_frame_id" value="/car_laser"/>
+    <param name="pub_raw_scan_pointcloud" value="true"/>
+
+    <param name="pub_laserscan" value="true"/>
+    <param name="laserscan_angle_increment" value="0.00149"/>
+
+    <param name="use_range_filter" value="true"/>
+    <param name="range_filter_min" value="0.2"/>
+    <param name="range_filter_max" value="15.0"/>
+
+    <param name="use_angle_filter" value="true"/>
+    <param name="angle_filter_min" value="-3.14"/>
+    <param name="angle_filter_max" value="3.14"/>
+
+    <param name="use_radius_outlier_filter" value="true"/>
+    <param name="radius_outlier_filter_search_radius" value="0.1"/>
+    <param name="radius_outlier_filter_min_neighbors" value="2"/>
+
+  </node>
+ 
+   <node pkg="laser_reflector_detect" type="laser_reflector_detect_node" name="laser_reflector_detect_node" output="screen" >
+       <rosparam file="$(find laser_reflector_detect)/param/laser_reflector_detect.yaml"/>
+   </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/demo_2d_okagv_laser_test.rviz" />
+  <node name="playbag" pkg="rosbag" type="play"
+      args="--clock -r 1 $(arg bag_filename)" />
+
+
+
+</launch>

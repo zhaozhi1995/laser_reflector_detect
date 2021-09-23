@@ -2,7 +2,11 @@
 project(laser_reflector_detect)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+#add_compile_options(-std=c++11)
+set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g -pthread")#
+
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -14,8 +18,14 @@ find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
 
     sensor_msgs
+    nav_msgs
     cartographer_ros_msgs
     visualization_msgs
+    
+    tf
+    tf2
+    tf2_eigen
+    tf2_ros
     )
 
 #find_package(realsense2 2.22.0)
@@ -56,6 +66,7 @@ catkin_package(
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Ceres REQUIRED)
 
 ##############################################################################
 # File Content
@@ -89,13 +100,14 @@ include_directories(
     #${realsense2_INCLUDE_DIRS}
     #${PCL_INCLUDE_DIRS}
     #${OpenCV_INCLUDE_DIRS}
+    ${CERES_INCLUDE_DIRS}
     )
-
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node ${QT_SOURCES} ${QT_RESOURCES_CPP} ${QT_FORMS_HPP} ${QT_MOC_HPP} ${QT_MOC})
+#add_executable(${PROJECT_NAME}_node ${QT_SOURCES} ${QT_RESOURCES_CPP} ${QT_FORMS_HPP} ${QT_MOC_HPP} ${QT_MOC})
+add_executable(${PROJECT_NAME}_node ${QT_SOURCES})
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
@@ -105,6 +117,7 @@ set(DEPENDENCIES ${realsense2_LIBRARY}
     ${OPENGL_LIBRARIES}
     ${catkin_LIBRARIES}
     Qt5::Widgets
+    ${CERES_LIBRARIES}
     )
 
 target_link_libraries(${PROJECT_NAME}_node ${DEPENDENCIES})
@@ -123,12 +136,15 @@ target_link_libraries(${PROJECT_NAME}_node ${DEPENDENCIES})
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY param  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
 ## Mark executables and/or libraries for installation
-# install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+ install(TARGETS ${PROJECT_NAME}_node
+   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/

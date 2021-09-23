@@ -1,6 +1,7 @@
 <launch>
 
-   <node pkg="laser_reflector_detect" type="laser_reflector_detect_node" name="laser_reflector_detect_node"  
-     output="screen" />
+   <node pkg="laser_reflector_detect" type="laser_reflector_detect_node" name="laser_reflector_detect_node" output="screen" >
+     <rosparam file="$(find laser_reflector_detect)/param/laser_reflector_detect.yaml"/>
+   </node>
 
 </launch>

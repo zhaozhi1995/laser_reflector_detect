@@ -62,7 +62,7 @@ public:
   float x;
   float y;
 
-  static Sample* Extract(int ind, const sensor_msgs::LaserScan& scan);
+  static Sample* Extract(int ind, int intensity, const sensor_msgs::LaserScan& scan);
 
 private:
   Sample() {};
@@ -145,6 +145,10 @@ public:
   void removeLessThan(uint32_t num);
 
   void splitConnected(float thresh);
+
+
+  private:
+   int reflector_intensity;
 };
 };  // namespace laser_processor
 

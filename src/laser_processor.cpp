@@ -40,7 +40,7 @@
 
 namespace laser_processor
 {
-Sample* Sample::Extract(int ind, const sensor_msgs::LaserScan& scan)
+Sample* Sample::Extract(int ind, int inensity, const sensor_msgs::LaserScan& scan)
 {
   Sample* s = new Sample();
 
@@ -51,7 +51,7 @@ Sample* Sample::Extract(int ind, const sensor_msgs::LaserScan& scan)
   s->y = sin(scan.angle_min + ind * scan.angle_increment) * s->range;
   if (     s->range > scan.range_min
         && s->range < scan.range_max
-        && s->intensity > 1000
+        && s->intensity > inensity
            )
     return s;
   else
@@ -113,6 +113,7 @@ tf::Point SampleSet::center()
 
 void ScanMask::addScan(sensor_msgs::LaserScan& scan)
 {
+  /*
   if (!filled)
   {
     angle_min = scan.angle_min;
@@ -154,6 +155,7 @@ void ScanMask::addScan(sensor_msgs::LaserScan& scan)
       }
     }
   }
+  */
 }
 
 bool ScanMask::hasSample(Sample* s, float thresh)
@@ -170,6 +172,7 @@ bool ScanMask::hasSample(Sample* s, float thresh)
 
 ScanProcessor::ScanProcessor(const sensor_msgs::LaserScan& scan, ScanMask& mask_, float mask_threshold)
 {
+  /*
   scan_ = scan;
 
   SampleSet* cluster = new SampleSet;
@@ -193,6 +196,7 @@ ScanProcessor::ScanProcessor(const sensor_msgs::LaserScan& scan, ScanMask& mask_
   }
 
   clusters_.push_back(cluster);
+  */
 }
 
 ScanProcessor::~ScanProcessor()
